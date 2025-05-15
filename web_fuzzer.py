@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 
 import argparse
 import concurrent.futures
@@ -12,12 +11,12 @@ import hashlib
 import re
 from difflib import SequenceMatcher
 
-# Disable SSL warnings
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class WebFuzzer:
     def __init__(self, target_url: str, wordlist: str = None, threads: int = 10, timeout: int = 10):
-        # Validate and clean the target URL
+
         if not target_url.startswith(('http://', 'https://')):
             target_url = 'http://' + target_url
         
@@ -25,7 +24,7 @@ class WebFuzzer:
         self.threads = threads
         self.timeout = timeout
         self.session = requests.Session()
-        self.session.verify = False  # Disable SSL verification
+        self.session.verify = False 
         self.session.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -36,18 +35,18 @@ class WebFuzzer:
         self.found_urls: Set[str] = set()
         self.errors: Set[str] = set()
         
-        # Get baseline responses for comparison
+
         try:
             print(f"\n[*] Testing connection to {self.target_url}")
             print("[*] SSL certificate verification disabled for testing purposes")
             
-            # Get main page response
+         
             self.baseline_response = self.session.get(self.target_url, timeout=self.timeout)
             self.baseline_hash = hashlib.md5(self.baseline_response.content).hexdigest()
             self.baseline_length = len(self.baseline_response.content)
             self.baseline_text = self.baseline_response.text
             
-            # Get a definitely non-existent page response
+     
             random_page = self.target_url + "page_that_definitely_does_not_exist_" + hashlib.md5(str(time.time()).encode()).hexdigest()[:8]
             self.error_response = self.session.get(random_page, timeout=self.timeout)
             self.error_hash = hashlib.md5(self.error_response.content).hexdigest()
@@ -59,8 +58,7 @@ class WebFuzzer:
             print(f"[*] Content-Type: {self.baseline_response.headers.get('Content-Type', 'Unknown')}")
             print(f"[*] Baseline response size: {self.baseline_length} bytes")
             print(f"[*] Error page response size: {self.error_length} bytes")
-            
-            # Calculate similarity between baseline and error page
+   
             similarity = SequenceMatcher(None, self.baseline_text, self.error_text).ratio()
             print(f"[*] Page similarity ratio: {similarity:.2%}")
             
@@ -73,76 +71,75 @@ class WebFuzzer:
             print("[!] Make sure the URL is correct and the site is accessible")
             sys.exit(1)
 
-        # Default wordlist if none provided
+     
         self.wordlist = self._load_default_wordlist() if wordlist is None else self._load_wordlist(wordlist)
 
     def _load_default_wordlist(self) -> List[str]:
         """Load a default list of common web files and directories."""
         common_paths = [
-            # Archive specific paths
+          
             'archive/', 'archives/', 'files/', 'download/', 'downloads/',
             'media/', 'documents/', 'docs/', 'public/', 'shared/',
             'content/', 'data/', 'storage/', 'upload/', 'uploads/',
             'file/', 'view/', 'browse/', 'search/', 'find/',
             'index/', 'list/', 'directory/', 'dir/', 'folder/',
             
-            # Common web paths
             'index.html', 'index.php', 'index.asp', 'default.html',
             'home.html', 'home.php', 'main.html', 'main.php',
             'about.html', 'about.php', 'contact.html', 'contact.php',
             'privacy.html', 'privacy.php', 'terms.html', 'terms.php',
             
-            # API and endpoints
+           
             'api/', 'api/v1/', 'api/v2/', 'api/docs/', 'swagger/',
             'graphql/', 'graphiql/', 'query/', 'endpoint/',
             'service/', 'services/', 'rest/', 'rpc/',
             
-            # User related
+          
             'login/', 'login.php', 'login.html', 'signin/',
             'register/', 'signup/', 'account/', 'profile/',
             'user/', 'users/', 'members/', 'member/',
             'auth/', 'authenticate/', 'logout/', 'signout/',
             
-            # Admin and management
+           
             'admin/', 'administrator/', 'moderator/', 'mod/',
             'cp/', 'cpanel/', 'dashboard/', 'manage/',
             'management/', 'control/', 'panel/', 'webadmin/',
             
-            # Common file types
+            
             '*.pdf', '*.doc', '*.docx', '*.txt', '*.zip',
             '*.rar', '*.7z', '*.tar.gz', '*.csv', '*.json',
             '*.xml', '*.rss', '*.atom', '*.mp3', '*.mp4',
             
-            # Configuration and info
+           
             'robots.txt', 'sitemap.xml', '.htaccess', 'favicon.ico',
             'config.php', 'configuration.php', 'settings.php',
             'info.php', 'phpinfo.php', 'test.php', 'status/',
             
-            # Common directories
+           
             'css/', 'js/', 'images/', 'img/', 'assets/',
             'static/', 'media/', 'temp/', 'tmp/', 'cache/',
             'backup/', 'old/', 'new/', 'dev/', 'test/',
             
-            # Archive specific files
+           
             'archive.zip', 'backup.zip', 'files.zip', 'download.zip',
             'archive.tar.gz', 'backup.tar.gz', 'files.tar.gz',
             'database.sql', 'db.sql', 'dump.sql', 'backup.sql',
             
-            # Common endpoints
+        
             'search.php', 'search.html', 'results.php', 'results.html',
             'browse.php', 'browse.html', 'view.php', 'view.html',
             'download.php', 'upload.php', 'process.php', 'handle.php',
             
-            # Specific to content sharing
+           
             'share/', 'sharing/', 'embed/', 'preview/',
             'thumbnail/', 'thumbnails/', 'viewer/', 'read/',
             'stream/', 'play/', 'watch/', 'listen/',
             
-            # Error pages
+          
             'error/', '404.html', '403.html', '500.html',
             'error.php', 'error.html', 'errorpage/', 'errors/',
             
-            # Specific paths for this type of site
+          
             'words/', 'dictionary/', 'archive/', 'text/',
             'documents/', 'entries/', 'categories/', 'tags/',
             'search/', 'browse/', 'recent/', 'popular/',
@@ -165,21 +162,21 @@ class WebFuzzer:
         try:
             response = self.session.get(url, timeout=self.timeout, allow_redirects=True)
             
-            # Get response characteristics
+      
             content_hash = hashlib.md5(response.content).hexdigest()
             size = len(response.content)
             content_type = response.headers.get('Content-Type', 'Unknown')
             final_url = response.url
             
-            # Calculate content similarity with baseline and error pages
+       
             response_text = response.text
             baseline_similarity = SequenceMatcher(None, self.baseline_text, response_text).ratio()
             error_similarity = SequenceMatcher(None, self.error_text, response_text).ratio()
             
-            # Look for specific patterns that might indicate a real page
+         
             content_str = response_text.lower()
             
-            # Define patterns that would indicate a real page
+        
             real_page_patterns = [
                 (r'login.*?password', 'login form'),
                 (r'admin.*?dashboard', 'admin panel'),
@@ -191,20 +188,19 @@ class WebFuzzer:
                 (r'browse.*?files?', 'file browser')
             ]
             
-            # Check for pattern matches
+     
             found_patterns = []
             for pattern, desc in real_page_patterns:
                 if re.search(pattern, content_str, re.IGNORECASE | re.DOTALL):
                     found_patterns.append(desc)
-            
-            # Check if this is likely a real page
+           
             is_unique = (
-                (baseline_similarity < 0.9 and error_similarity < 0.9) or  # Content is significantly different
-                (abs(size - self.baseline_length) > 100 and abs(size - self.error_length) > 100) or  # Size is significantly different
-                found_patterns or  # Contains specific functionality patterns
-                'application/json' in content_type.lower() or  # API endpoints
-                response.status_code in [401, 403] or  # Access denied pages
-                final_url != url  # URL was redirected
+                (baseline_similarity < 0.9 and error_similarity < 0.9) or  
+                (abs(size - self.baseline_length) > 100 and abs(size - self.error_length) > 100) or
+                found_patterns or 
+                'application/json' in content_type.lower() or 
+                response.status_code in [401, 403] or 
+                final_url != url 
             )
             
             if response.status_code in [200, 201, 301, 302, 307, 308, 401, 403] and is_unique:
@@ -268,7 +264,7 @@ class WebFuzzer:
         print("Scan Results:")
         print("="*50)
         
-        # Group results by likelihood
+       
         real_pages = []
         possible_pages = []
         false_positives = []
